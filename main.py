@@ -104,7 +104,7 @@ class FCLayer(object):
     self.device = device
     self.weights = torch.empty((self.input_size, self.output_size)).normal_(0.0,0.05).float().to(self.device)
     self.numerical_test = numerical_test
-    self.bias = torch.zeros((self.batch_size, self.output_size))
+    self.bias = torch.zeros((self.batch_size, self.output_size)).float().to(self.device)
     if self.numerical_test:
       self.weights = nn.Parameter(self.weights)
       self.bias = nn.Parameter(self.bias)
@@ -155,12 +155,13 @@ class FCLayer(object):
 
 
 class Net(object):
-  def __init__(self, layers, n_inference_steps,use_backwards_weights=False, update_backwards_weights=False, use_backward_nonlinearity=True):
+  def __init__(self, layers, n_inference_steps,use_backwards_weights=False, update_backwards_weights=False, use_backward_nonlinearity=True,device="cpu"):
     self.layers = layers
     self.n_inference_steps = n_inference_steps
     self.use_backwards_weights = use_backwards_weights
     self.update_backwards_weights = update_backwards_weights
     self.use_backward_nonlinearity = use_backward_nonlinearity
+    self.device = device
     self.update_layer_params()
 
   def forward(self, inp):
@@ -239,7 +240,8 @@ class Net(object):
       for n_epoch in range(num_epochs):
         print("Beginning epoch ",n_epoch)
         for n,(img,label) in enumerate(trainset):
-          label = onehot(label)
+          img = img.to(self.device)
+          label = onehot(label).to(self.device)
           self.learn_batch(img, label,num_inference_steps,update_weights=True)
           pred_outs = self.forward(img)
           L = torch.sum((pred_outs - label)**2)
@@ -250,8 +252,9 @@ class Net(object):
           accs.append(acc)
         if test:
           for tn, (test_img, test_label) in enumerate(testset):
+            test_img = test_img.to(self.device)
+            labels = onehot(test_label).to(self.device)
             pred_outs = self.forward(test_img)
-            labels = onehot(test_label)
             test_acc = accuracy(pred_outs, labels)
             test_accs.append(test_acc)
         self.save_model(logdir,savedir,losses,accs,test_accs)
@@ -303,5 +306,5 @@ if __name__ == '__main__':
     l3 = FCLayer(300,100,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     layers =[l1,l2,l3,l4]
-    net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity)
+    net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,device=DEVICE)
     net.train(trainset[0:-2],testset[0:-2],args.logdir,args.savedir,args.N_epochs, args.n_inference_steps)
