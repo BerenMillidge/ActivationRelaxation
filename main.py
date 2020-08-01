@@ -16,29 +16,28 @@ from datetime import datetime
 import argparse
 
 def get_dataset(batch_size,norm_factor):
+    #currently assuming just MNIST
     transform = transforms.Compose([transforms.ToTensor()])#, transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))])
+
+
     trainset = torchvision.datasets.MNIST(root='./mnist_data', train=True,
                                             download=False, transform=transform)
     print("trainset: ", trainset)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                            shuffle=True, num_workers=1)
+                                            shuffle=True)
     print("trainloader: ", trainloader)
-
-    # get some random training images
     trainset = list(iter(trainloader))
-    for i,(img, label) in enumerate(trainset):
-        trainset[i] = (img.reshape(len(img),784) /norm_factor ,label)
 
     testset = torchvision.datasets.MNIST(root='./mnist_data', train=False,
                                         download=False, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                            shuffle=False, num_workers=1)
-
+                                            shuffle=True)
     testset = list(iter(testloader))
+    for i,(img, label) in enumerate(trainset):
+        trainset[i] = (img.reshape(len(img),784) /norm_factor ,label)
     for i,(img, label) in enumerate(testset):
         testset[i] = (img.reshape(len(img),784) /norm_factor ,label)
     return trainset, testset
-
 def onehot(x):
     z = torch.zeros([len(x),10])
     for i in range(len(x)):
@@ -305,4 +304,4 @@ if __name__ == '__main__':
     l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     layers =[l1,l2,l3,l4]
     net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity)
-    net.train([trainset[0]],testset[0:-2],args.logdir,args.savedir,args.N_epochs, args.n_inference_steps)
+    net.train(trainset[0:-2],testset[0:-2],args.logdir,args.savedir,args.N_epochs, args.n_inference_steps)
