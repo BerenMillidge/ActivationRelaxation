@@ -270,6 +270,77 @@ class Net(object):
       else:
         return losses, accs
 
+class BackpropNet(object):
+    def __init__(self, layers,device="cpu"):
+        self.layers = layers
+        self.device = device
+        for l in self.layers:
+            l.set_weight_parameter()
+            l.numerical_test = True
+
+    def forward(self,x):
+        for i,l in enumerate(self.layers):
+            x = l.forward(x)
+        return x
+
+    def save_model(self,logdir,savedir,losses,accs,test_accs):
+        np.save(logdir +"/losses.npy",np.array(losses))
+        np.save(logdir+"/accs.npy",np.array(accs))
+        np.save(logdir+"/test_accs.npy",np.array(test_accs))
+        subprocess.call(['rsync','--archive','--update','--compress','--progress',str(logdir) +"/",str(savedir)])
+        print("Rsynced files from: " + str(logdir) + "/ " + " to" + str(savedir))
+        now = datetime.now()
+        current_time = str(now.strftime("%H:%M:%S"))
+        subprocess.call(['echo','saved at time: ' + str(current_time)])
+
+    def zero_grad(self):
+        for l in self.layers:
+            l.weights.grad = torch.zeros_like(l.weights.grad).to(l.device)
+
+
+    def train(self, trainset, testset,logdir,savedir, num_epochs,num_inference_steps,test=True):
+        losses = []
+        accs = []
+        test_accs = []
+        #begin training loop
+        for n_epoch in range(num_epochs):
+            print("Beginning epoch ",n_epoch)
+            for n,(img,label) in enumerate(trainset):
+                img = img.to(self.device)
+                label = onehot(label).to(self.device)
+                pred_outs = self.forward(img)
+                L = torch.sum((pred_outs - label)**2)
+                L.backward()
+                acc = accuracy(pred_outs,label)
+                print("epoch: " + str(n_epoch) + " loss batch " + str(n) + "  " + str(L))
+                print("acc batch " + str(n) + "  " + str(acc))
+                losses.append(L.item())
+                accs.append(acc)
+                #update
+                for l in self.layers:
+                    #SGD update
+                    lgrad = l.weights.grad.clone()
+                    l.weights = l.weights.detach().clone()
+                    l.weights -= l.weight_lr * lgrad
+                    l.weights = nn.Parameter(l.weights)
+                #zero grad weights just to be sure
+                #self.zero_grad()
+            if test:
+                with torch.no_grad():
+                    for tn, (test_img, test_label) in enumerate(testset):
+                        test_img = test_img.to(self.device)
+                        labels = onehot(test_label).to(self.device)
+                        pred_outs = self.forward(test_img)
+                        test_acc = accuracy(pred_outs, labels)
+                        test_accs.append(test_acc)
+            self.save_model(logdir,savedir,losses,accs,test_accs)
+        if test:
+            return losses, accs, test_accs
+        else:
+            return losses, accs
+
+
+
 
 if __name__ == '__main__':
     global DEVICE
@@ -291,6 +362,7 @@ if __name__ == '__main__':
     parser.add_argument("--use_backwards_weights",type=boolcheck, default=False)
     parser.add_argument("--use_backward_nonlinearity",type=boolcheck, default=True)
     parser.add_argument("--update_backwards_weights",type=boolcheck,default=True)
+    parser.add_argument("--network_type",type=str,default="ar")
 
     args = parser.parse_args()
     print("Args parsed")
@@ -306,5 +378,10 @@ if __name__ == '__main__':
     l3 = FCLayer(300,100,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     layers =[l1,l2,l3,l4]
-    net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,device=DEVICE)
+    if args.network_type == "ar":
+        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,device=DEVICE)
+    elif args.network_type == "bp":
+        net = BackpropNet(layers,device=DEVICE)
+    else:
+        raise ValueError("Network type not recognised: must be either ar (activation relaxation) or bp (backprop)")
     net.train(trainset[0:-2],testset[0:-2],args.logdir,args.savedir,args.N_epochs, args.n_inference_steps)
