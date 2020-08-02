@@ -236,6 +236,29 @@ def plot_numerical_divergence(errors,i):
     fig.savefig("figures/numerics_proper_divergence_layer_" + str(i) +".jpg")
     plt.show()
 
+def plot_numerical_divergence_layers(errors):
+    fig,ax = plt.subplots(1,1,figsize=(9,7))
+    plt.title("Layerwise Divergences from True Gradient",fontsize=20,fontweight="bold",pad=25)
+    for (i,es) in enumerate(errors):
+        ax.plot(es,label="layer " + str(i+1))
+        plt.xlabel("Iteration",fontsize=20,style="oblique",labelpad=10)
+    plt.ylabel("Total Divergence",fontsize=20,style="oblique",labelpad=10)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    legend = plt.legend()
+    legend.fontsize=18
+    legend.style="oblique"
+    frame  = legend.get_frame()
+    frame.set_facecolor("1.0")
+    frame.set_edgecolor("1.0")
+    ax.tick_params(axis='both',which='major',labelsize=20)
+    ax.tick_params(axis='both',which='minor',labelsize=18)
+    fig.tight_layout()
+    fig.savefig("figures/lnumerics_proper_divergence_layers" +".jpg")
+    plt.show()
+    
+
+
 def plot_learning_rate_comparison(errors_list, lrs,i,log_scale=False):
     fig,ax = plt.subplots(1,1,figsize=(9,7))
     plt.title("Learning Rate Comparison Layer " + str(i),fontsize=20,fontweight="bold",pad=25)
@@ -278,9 +301,10 @@ if __name__ == '__main__':
     #baseline result
     base_lr = 0.1
     e3s,e2s,e1s = numerical_test(base_lr,100)
-    plot_numerical_divergence(e3s,3)
-    plot_numerical_divergence(e2s,2)
-    plot_numerical_divergence(e1s,1)
+    #plot_numerical_divergence(e3s,3)
+    #plot_numerical_divergence(e2s,2)
+    #plot_numerical_divergence(e1s,1)
+    plot_numerical_divergence_layers([e3s,e2s,e1s])
     #learning rate comparison
     lrs = [0.5,0.2,0.1,0.05,0.02,0.01,0.005]
     learning_rate_comparison(lrs,200)
