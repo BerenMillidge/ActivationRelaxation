@@ -40,7 +40,7 @@ def get_dataset(batch_size,norm_factor,dataset="mnist"):
         for i,(img, label) in enumerate(testset):
             testset[i] = (img.reshape(len(img),784) /norm_factor ,label)
         return trainset, testset
-    elif dataset == "SVHN":
+    elif dataset == "svhn":
         trainset = torchvision.datasets.SVHN(root='./svhn_data', split='train',
                                               download=False, transform=transform)
         print("trainset: ", trainset)
