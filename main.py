@@ -14,30 +14,74 @@ import subprocess
 import time 
 from datetime import datetime
 import argparse
+import scipy
 
-def get_dataset(batch_size,norm_factor):
+def get_dataset(batch_size,norm_factor,dataset="mnist"):
     #currently assuming just MNIST
     transform = transforms.Compose([transforms.ToTensor()])#, transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))])
 
 
-    trainset = torchvision.datasets.MNIST(root='./mnist_data', train=True,
-                                            download=False, transform=transform)
-    print("trainset: ", trainset)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                            shuffle=True)
-    print("trainloader: ", trainloader)
-    trainset = list(iter(trainloader))
+    if dataset == "mnist":
+        trainset = torchvision.datasets.MNIST(root='./mnist_data', train=True,
+                                                download=False, transform=transform)
+        print("trainset: ", trainset)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                                shuffle=True)
+        print("trainloader: ", trainloader)
+        trainset = list(iter(trainloader))
 
-    testset = torchvision.datasets.MNIST(root='./mnist_data', train=False,
-                                        download=False, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                            shuffle=True)
-    testset = list(iter(testloader))
-    for i,(img, label) in enumerate(trainset):
-        trainset[i] = (img.reshape(len(img),784) /norm_factor ,label)
-    for i,(img, label) in enumerate(testset):
-        testset[i] = (img.reshape(len(img),784) /norm_factor ,label)
-    return trainset, testset
+        testset = torchvision.datasets.MNIST(root='./mnist_data', train=False,
+                                            download=False, transform=transform)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+                                                shuffle=True)
+        testset = list(iter(testloader))
+        for i,(img, label) in enumerate(trainset):
+            trainset[i] = (img.reshape(len(img),784) /norm_factor ,label)
+        for i,(img, label) in enumerate(testset):
+            testset[i] = (img.reshape(len(img),784) /norm_factor ,label)
+        return trainset, testset
+    elif dataset == "SVHN":
+        trainset = torchvision.datasets.SVHN(root='./svhn_data', split='train',
+                                              download=False, transform=transform)
+        print("trainset: ", trainset)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                                shuffle=True)
+        print("trainloader: ", trainloader)
+        trainset = list(iter(trainloader))
+
+        testset = torchvision.datasets.SVHN(root='./svhn_data', split='test',
+                                            download=False, transform=transform)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+                                                shuffle=True)
+        testset = list(iter(testloader))
+        for i,(img, label) in enumerate(trainset):
+            trainset[i] = (img.reshape(len(img),3*32*32) /norm_factor ,label)
+        for i,(img, label) in enumerate(testset):
+            testset[i] = (img.reshape(len(img),3*32*32) /norm_factor ,label)
+        return trainset, testset
+    elif dataset == "fashion":
+        trainset = torchvision.datasets.FashionMNIST(root='./fashion_data', train=True,
+                                              download=False, transform=transform)
+        print("trainset: ", trainset)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                                shuffle=False)
+        print("trainloader: ", trainloader)
+        trainset = list(iter(trainloader))
+
+        testset = torchvision.datasets.FashionMNIST(root='./fashion_data', train=False,
+                                            download=True, transform=transform)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+                                                shuffle=True)
+        testset = list(iter(testloader))
+        for i,(img, label) in enumerate(trainset):
+            trainset[i] = (img.reshape(len(img),784) /norm_factor ,label)
+        for i,(img, label) in enumerate(testset):
+            testset[i] = (img.reshape(len(img),784) /norm_factor ,label)
+        return trainset, testset
+    else:
+      raise ValueError("Dataset not recognised -- must be mnist, svhn, or fashion")
+
+
 def onehot(x):
     z = torch.zeros([len(x),10])
     for i in range(len(x)):
@@ -372,11 +416,19 @@ if __name__ == '__main__':
     if args.logdir != "":
         subprocess.call(["mkdir","-p",str(args.logdir)])
     print("folders created")
-    trainset,testset = get_dataset(args.batch_size,args.norm_factor)
-    l1 = FCLayer(784,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-    l2 = FCLayer(300,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-    l3 = FCLayer(300,100,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-    l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+    trainset,testset = get_dataset(args.batch_size,args.norm_factor,dataset=args.dataset)
+    if args.dataset == "mnist" or args.dataset=="fashion":
+      l1 = FCLayer(784,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l2 = FCLayer(300,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l3 = FCLayer(300,100,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+    elif args.dataset == "svhn":
+      l1 = FCLayer(3072,1000,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l2 = FCLayer(1000,1000,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l3 = FCLayer(1000,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l4 = FCLayer(300,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+    else:
+      raise ValueError("dataset not recognised")
     layers =[l1,l2,l3,l4]
     if args.network_type == "ar":
         net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,device=DEVICE)
