@@ -8,7 +8,7 @@ base_call = "python main.py"
 output_file = open(generated_name, "w")
 seeds = 5
 datasets = ["svhn","fashion"]
-for dataset in dataset:
+for dataset in datasets:
     base_call = base_call + " --dataset " + str(dataset)
     condition="default"
     for s in range(seeds):
