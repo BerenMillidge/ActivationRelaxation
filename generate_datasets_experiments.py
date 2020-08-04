@@ -10,7 +10,7 @@ seeds = 5
 datasets = ["svhn","fashion"]
 for dataset in datasets:
     base_call = base_call + " --dataset " + str(dataset)
-    condition="default"
+    condition= dataset+"_default"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -18,7 +18,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition="backwards_weights_with_update"
+    condition=dataset+"_backwards_weights_with_update"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -26,7 +26,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
         
-    condition="feedback_alignment"
+    condition=dataset+"_feedback_alignment"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -34,7 +34,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
         
-    condition="feedback_alignment_no_nonlinearity"
+    condition=dataset+"_feedback_alignment_no_nonlinearity"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -42,7 +42,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition="no_nonlinearities"
+    condition=dataset+_"no_nonlinearities"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -50,7 +50,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition="full_construct"
+    condition=dataset+_"full_construct"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
