@@ -42,7 +42,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition=dataset+_"no_nonlinearities"
+    condition=dataset+"_no_nonlinearities"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -50,7 +50,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition=dataset+_"full_construct"
+    condition=dataset+"_full_construct"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
