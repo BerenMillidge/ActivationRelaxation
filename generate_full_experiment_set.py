@@ -11,14 +11,14 @@ datasets = ["mnist","fashion"]
 for dataset in datasets:
     basecall = bcall + " --dataset " + str(dataset)
     for s in range(seeds):
-        condition="default"
+        condition=dataset+"_default"
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
         final_call = base_call + " --logdir " + str(lpath) + " --savedir " + str(spath)
         print(final_call)
         print(final_call, file=output_file)
 
-    condition="backwards_weights_with_update"
+    condition=dataset+"_backwards_weights_with_update"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -26,7 +26,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
         
-    condition="feedback_alignment"
+    condition=dataset+"_feedback_alignment"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -34,7 +34,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
         
-    condition="feedback_alignment_no_nonlinearity"
+    condition=dataset+"_feedback_alignment_no_nonlinearity"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -42,7 +42,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition="no_nonlinearities"
+    condition=dataset+"_no_nonlinearities"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -50,7 +50,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-    condition="full_construct"
+    condition=dataset+"_full_construct"
     for s in range(seeds):
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -58,7 +58,7 @@ for dataset in datasets:
         print(final_call)
         print(final_call, file=output_file)
 
-        condition="bp"
+        condition=dataset+"_bp"
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
         final_call = base_call + " --logdir " + str(lpath) + " --savedir " + str(spath) + " --network_type bp"
