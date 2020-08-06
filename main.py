@@ -199,7 +199,7 @@ class FCLayer(object):
 
 
 class Net(object):
-  def __init__(self, layers, n_inference_steps,use_backwards_weights=False, update_backwards_weights=False, use_backward_nonlinearity=True,device="cpu"):
+  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,device="cpu"):
     self.layers = layers
     self.n_inference_steps = n_inference_steps
     self.use_backwards_weights = use_backwards_weights
@@ -207,7 +207,11 @@ class Net(object):
     self.use_backward_nonlinearity = use_backward_nonlinearity
     self.device = device
     self.update_layer_params()
+    #check that the correct things are getting called
+    subprocess.call(["echo", "Params checking: " + str(self.use_backwards_weights) + " " + str(self.use_backward_nonlinearity)+ " " + str(self.update_backwards_weights)])
 
+
+    
   def forward(self, inp):
     xs = [[] for i in range(len(self.layers)+1)]
     xs[0] = inp
@@ -349,6 +353,8 @@ class BackpropNet(object):
         #begin training loop
         for n_epoch in range(num_epochs):
             print("Beginning epoch ",n_epoch)
+            losslist = []
+            acclist = []
             for n,(img,label) in enumerate(trainset):
                 img = img.to(self.device)
                 label = onehot(label).to(self.device)
@@ -377,6 +383,8 @@ class BackpropNet(object):
                         pred_outs = self.forward(test_img)
                         test_acc = accuracy(pred_outs, labels)
                         test_accs.append(test_acc)
+            losses.append(np.mean(np.array(losslist)))
+            accs.append(np.mean(np.array(acclist)))
             self.save_model(logdir,savedir,losses,accs,test_accs)
         if test:
             return losses, accs, test_accs
@@ -396,8 +404,8 @@ if __name__ == '__main__':
     parser.add_argument("--savedir",type=str,default="savedir")
     parser.add_argument("--batch_size",type=int, default=64)
     parser.add_argument("--norm_factor",type=float, default=1)
-    parser.add_argument("--learning_rate",type=float,default=0.001)
-    parser.add_argument("--N_epochs",type=int, default=10)
+    parser.add_argument("--learning_rate",type=float,default=0.0005)
+    parser.add_argument("--N_epochs",type=int, default=30)
     parser.add_argument("--save_every",type=int, default=1)
     parser.add_argument("--old_savedir",type=str,default="None")
     parser.add_argument("--n_inference_steps",type=int,default=100)
