@@ -9,7 +9,7 @@ output_file = open(generated_name, "w")
 seeds = 5
 datasets = ["mnist","fashion"]
 for dataset in datasets:
-    basecall = bcall + " --dataset " + str(dataset)
+    base_call = bcall + " --dataset " + str(dataset)
     for s in range(seeds):
         condition=dataset+"_default"
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
