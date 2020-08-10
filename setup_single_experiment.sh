@@ -28,6 +28,7 @@
 
 source ~/.bashrc
 set -e
+echo $(date)
 echo "Setting up log files"
 USER=s1686853
 SCRATCH_DISK=/disk/scratch
