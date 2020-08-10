@@ -364,8 +364,8 @@ class BackpropNet(object):
                 acc = accuracy(pred_outs,label)
                 print("epoch: " + str(n_epoch) + " loss batch " + str(n) + "  " + str(L))
                 print("acc batch " + str(n) + "  " + str(acc))
-                losses.append(L.item())
-                accs.append(acc)
+                losslist.append(L.item())
+                acclist.append(acc)
                 #update
                 for l in self.layers:
                     #SGD update
