@@ -224,7 +224,7 @@ def plot_numerical_divergence(errors,i):
     plt.ylabel("MSE between predicted and true gradient",fontsize=20,style="oblique",labelpad=10)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    legend = plt.legend()
+    legend = plt.legend(prop={"size":8})
     legend.fontsize=18
     legend.style="oblique"
     frame  = legend.get_frame()
@@ -240,12 +240,12 @@ def plot_numerical_divergence_layers(errors):
     fig,ax = plt.subplots(1,1,figsize=(9,7))
     plt.title("Layerwise Divergences from True Gradient",fontsize=20,fontweight="bold",pad=25)
     for (i,es) in enumerate(errors):
-        ax.plot(es,label="layer " + str(i+1))
+        ax.plot(es,label="Layer " + str(i+1))
         plt.xlabel("Iteration",fontsize=20,style="oblique",labelpad=10)
     plt.ylabel("MSE between predicted and true gradient",fontsize=20,style="oblique",labelpad=10)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    legend = plt.legend()
+    legend = plt.legend(prop={"size":16})
     legend.fontsize=18
     legend.style="oblique"
     frame  = legend.get_frame()
@@ -266,14 +266,14 @@ def plot_learning_rate_comparison(errors_list, lrs,i,log_scale=False):
         labelstr = "Learning Rate " + str(lr)
         ax.plot(ey0,label=labelstr)
     plt.xlabel("Iteration",fontsize=20,style="oblique",labelpad=10)
-    plt.ylabel("MSE between predicted and true gradient",fontsize=20,style="oblique",labelpad=10)
+    #plt.ylabel("MSE between predicted and true gradient",fontsize=20,style="oblique",labelpad=10)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     log = ""
     if log_scale:
         plt.yscale("log")
         log = "_log"
-    legend = plt.legend()
+    legend = plt.legend(prop={"size":16})
     legend.fontsize=16
     legend.style="oblique"
     frame  = legend.get_frame()
