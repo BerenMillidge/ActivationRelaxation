@@ -1,6 +1,5 @@
 # ActivationRelaxation
 
-# Activation Relaxation
 Code for the paper "Activation Relaxation: A Local Dynamical Approximation to Backprop in the Brain" -- https://arxiv.org/pdf/2009.05359.pdf.
 
 The paper demonstrates a novel algorithm which can converge to the backpropagation of error algorithm using only local learning rules. We demonstrate numerical convergence to autodiff gradients as well as strong performance in training MLPs on MNIST and Fashion-MNIST. Moreover, we propose additional simplifications of the algorithm which remove further biological implausibilities and which maintain strong learning performance.
@@ -18,8 +17,8 @@ The code is written in [Python 3.x] and uses the following packages:
 If you find this code useful, please reference in your paper:
 ```
 @article{millidge2020activation,
-  title={Activation Relaxation: A Local Dynamical Approximation to Backprop in the Brain},
-  author={Millidge, Beren and Tschantz, Alexander and Seth, Anil and Buckley, Christopher},
+  title={Activation Relaxation: A Local Dynamical Approximation to Backpropagation in the Brain},
+  author={Millidge, Beren and Tschantz, Alexander and Buckley, Christopher L and Seth, Anil},
   journal={arXiv preprint arXiv:2009.05359},
   year={2020}
 }
