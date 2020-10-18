@@ -16,10 +16,10 @@ The code is written in [Python 3.x] and uses the following packages:
 
 If you find this code useful, please reference in your paper:
 ```
-@article{millidge2020investigating,
-  title={Investigating the Scalability and Biological Plausibility of the Activation Relaxation Algorithm},
-  author={Millidge, Beren and Tschantz, Alexander and Seth, Anil and Buckley, Christopher L},
-  journal={arXiv preprint arXiv:2010.06219},
+@article{millidge2020activation,
+  title={Activation Relaxation: A Local Dynamical Approximation to Backpropagation in the Brain},
+  author={Millidge, Beren and Tschantz, Alexander and Buckley, Christopher L and Seth, Anil},
+  journal={arXiv preprint arXiv:2009.05359},
   year={2020}
 }
 ```
