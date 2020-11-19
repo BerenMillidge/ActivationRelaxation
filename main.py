@@ -23,7 +23,7 @@ def get_dataset(batch_size,norm_factor,dataset="mnist"):
 
     if dataset == "mnist":
         trainset = torchvision.datasets.MNIST(root='./mnist_data', train=True,
-                                                download=False, transform=transform)
+                                                download=True, transform=transform)
         print("trainset: ", trainset)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                                 shuffle=True)
@@ -31,7 +31,7 @@ def get_dataset(batch_size,norm_factor,dataset="mnist"):
         trainset = list(iter(trainloader))
 
         testset = torchvision.datasets.MNIST(root='./mnist_data', train=False,
-                                            download=False, transform=transform)
+                                            download=True, transform=transform)
         testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                                 shuffle=True)
         testset = list(iter(testloader))
@@ -81,6 +81,8 @@ def get_dataset(batch_size,norm_factor,dataset="mnist"):
     else:
       raise ValueError("Dataset not recognised -- must be mnist, svhn, or fashion")
 
+def np_norm(x):
+      return np.linalg.norm(x.numpy())
 
 def onehot(x):
     z = torch.zeros([len(x),10])
@@ -164,6 +166,10 @@ class FCLayer(object):
     self.weights = nn.Parameter(self.weights)
     self.bias = nn.Parameter(self.bias)
 
+  def detach_weight_parameter(self):
+    self.weights = self.weights.detach()
+    self.bais = self.bias.detach()
+
   def init_backwards_weights(self):
     self.backwards_weights = torch.empty((self.output_size, self.input_size)).normal_(0.0,0.05).float().to(self.device)
 
@@ -196,15 +202,17 @@ class FCLayer(object):
       self.bias -= self.weight_lr * biasgrad
       if self.use_backwards_weights and self.update_backwards_weights:
         self.backwards_weights -= self.weight_lr * bwgrad
+    return wgrad
 
 
 class Net(object):
-  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,device="cpu"):
+  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,store_gradient_angle=False,device="cpu"):
     self.layers = layers
     self.n_inference_steps = n_inference_steps
     self.use_backwards_weights = use_backwards_weights
     self.update_backwards_weights = update_backwards_weights
     self.use_backward_nonlinearity = use_backward_nonlinearity
+    self.store_gradient_angle = store_gradient_angle
     self.device = device
     self.update_layer_params()
     #check that the correct things are getting called
@@ -218,6 +226,15 @@ class Net(object):
     for i,l in enumerate(self.layers):
       xs[i+1] = l.forward(xs[i])
     return xs[-1]
+
+  
+
+  def set_net_params(self):
+        for l in self.layers:
+              l.set_weight_parameter()
+  def detach_net_params(self):
+        for l in self.layers:
+              l.detach_weight_parameter()
 
   def unset_numerical_test(self):
     for l in self.layers:
@@ -250,6 +267,7 @@ class Net(object):
   def learn_batch(self,inps,labels,num_inference_steps,update_weights=True):
     #print("learn batch update weights: ", update_weights)
     xs = [[] for i in range(len(self.layers)+1)]
+    wgrads = []
     xs[0] = inps
     #forward pass
     for i,l in enumerate(self.layers):
@@ -264,12 +282,18 @@ class Net(object):
         backs[j] = self.layers[j].backward(backs[j+1])
     # weight updates
     for i,l in enumerate(self.layers):
-      l.update_weights(backs[i+1],update_weights=update_weights)
+      wgrad = l.update_weights(backs[i+1],update_weights=update_weights)
+      if self.store_gradient_angle:
+        wgrads.append(wgrad)
+    return wgrads
 
-  def save_model(self,logdir,savedir,losses,accs,test_accs):
+  def save_model(self,logdir,savedir,losses,accs,test_accs,grad_angles, mean_test_accs, mean_train_accs):
     np.save(logdir +"/losses.npy",np.array(losses))
     np.save(logdir+"/accs.npy",np.array(accs))
     np.save(logdir+"/test_accs.npy",np.array(test_accs))
+    np.save(logdir + "/grad_angles.npy", np.array(grad_angles))
+    np.save(logdir + "/mean_test_accs.npy", np.array(mean_test_accs))
+    np.save(logdit + "/mean_train_accs.npy", np.array(mean_train_accs))
     subprocess.call(['rsync','--archive','--update','--compress','--progress',str(logdir) +"/",str(savedir)])
     print("Rsynced files from: " + str(logdir) + "/ " + " to" + str(savedir))
     now = datetime.now()
@@ -277,20 +301,53 @@ class Net(object):
     subprocess.call(['echo','saved at time: ' + str(current_time)])
 
 
+  def compute_gradient_angle(self,img,label):
+        #img = img.to(self.device)
+        #label = onehot(label).to(self.device)
+        self.detach_net_params()
+        AR_grads = self.learn_batch(img, label, self.n_inference_steps, update_weights=False)
+        # compute BP gradients
+        self.set_net_params()
+        img = nn.Parameter(img)
+        out = self.forward(img)
+        L = torch.sum((out - label)**2)
+        L.backward()
+        BP_grads = [deepcopy(l.weights.grad) for l in self.layers]
+        self.detach_net_params()
+        # accumulate mean angle
+        mean_angle = 0
+        for (AR_grad, BP_grad) in zip(AR_grads, BP_grads):
+              # lillicrap approach of simply computing the cosine similarity on the flattened gradient matrices
+              AR_flat = AR_grad.detach().flatten()
+              BP_flat = BP_grad.detach().flatten()
+              angle = (torch.dot(AR_flat, BP_flat) / (np_norm(AR_flat) * np_norm(BP_flat))).item()
+              if angle >= 1: # hack for stability
+                angle = 0.99999
+              angle = np.arccos(angle)
+              mean_angle += angle
+        return mean_angle / len(self.layers)
+
+              
+              
+
 
   def train(self, trainset, testset,logdir,savedir, num_epochs,num_inference_steps,test=True):
     self.unset_numerical_test()
-    with torch.no_grad():
-      losses = []
-      accs = []
-      test_accs = []
-      #begin training loop
-      for n_epoch in range(num_epochs):
-        print("Beginning epoch ",n_epoch)
-        for n,(img,label) in enumerate(trainset):
+    losses = []
+    accs = []
+    test_accs = []
+    gradient_angles = []
+    mean_test_accs = []
+    mean_train_accs = []
+    #begin training loop
+    for n_epoch in range(num_epochs):
+      epoch_train_accs = []
+      print("Beginning epoch ",n_epoch)
+      for n,(img,label) in enumerate(trainset):
+        with torch.no_grad():
           img = img.to(self.device)
           label = onehot(label).to(self.device)
-          self.learn_batch(img, label,num_inference_steps,update_weights=True)
+          self.learn_batch(img, label,self.n_inference_steps,update_weights=True)
           pred_outs = self.forward(img)
           L = torch.sum((pred_outs - label)**2)
           acc = accuracy(pred_outs,label)
@@ -298,14 +355,23 @@ class Net(object):
           print("acc batch " + str(n) + "  " + str(acc))
           losses.append(L.item())
           accs.append(acc)
-        if test:
-          for tn, (test_img, test_label) in enumerate(testset):
-            test_img = test_img.to(self.device)
-            labels = onehot(test_label).to(self.device)
-            pred_outs = self.forward(test_img)
-            test_acc = accuracy(pred_outs, labels)
-            test_accs.append(test_acc)
-        self.save_model(logdir,savedir,losses,accs,test_accs)
+          epoch_train_accs.append(accs)
+        if self.store_gradient_angle:
+          grad_angle = self.compute_gradient_angle(img,label)
+          print("grad angle: ", grad_angle)
+          gradient_angles.append(grad_angle)
+      mean_train_accs.append(np.mean(np.array(epoch_train_accs)))
+      if test:
+        epoch_test_accs = []
+        for tn, (test_img, test_label) in enumerate(testset):
+          test_img = test_img.to(self.device)
+          labels = onehot(test_label).to(self.device)
+          pred_outs = self.forward(test_img)
+          test_acc = accuracy(pred_outs, labels)
+          test_accs.append(test_acc)
+          epoch_test_accs.append(test_acc)
+        mean_test_accs.append(np.mean(np.array(epoch_test_accs)))
+      self.save_model(logdir,savedir,losses,accs,test_accs,gradient_angles,mean_test_accs, mean_train_accs)
 
       #print("Losses")
       #plt.plot(losses)
@@ -331,10 +397,12 @@ class BackpropNet(object):
             x = l.forward(x)
         return x
 
-    def save_model(self,logdir,savedir,losses,accs,test_accs):
+    def save_model(self,logdir,savedir,losses,accs,test_accs, mean_test_accs, mean_train_accs):
         np.save(logdir +"/losses.npy",np.array(losses))
         np.save(logdir+"/accs.npy",np.array(accs))
         np.save(logdir+"/test_accs.npy",np.array(test_accs))
+        np.save(logdir + "/mean_test_accs.npy", np.array(mean_test_accs))
+        np.save(logdit + "/mean_train_accs.npy", np.array(mean_train_accs))
         subprocess.call(['rsync','--archive','--update','--compress','--progress',str(logdir) +"/",str(savedir)])
         print("Rsynced files from: " + str(logdir) + "/ " + " to" + str(savedir))
         now = datetime.now()
@@ -350,8 +418,11 @@ class BackpropNet(object):
         losses = []
         accs = []
         test_accs = []
+        mean_train_accs = []
+        mean_test_accs = []
         #begin training loop
         for n_epoch in range(num_epochs):
+            epoch_train_accs = []
             print("Beginning epoch ",n_epoch)
             losslist = []
             acclist = []
@@ -366,6 +437,7 @@ class BackpropNet(object):
                 print("acc batch " + str(n) + "  " + str(acc))
                 losslist.append(L.item())
                 acclist.append(acc)
+                epoch_train_accs.append(accs)
                 #update
                 for l in self.layers:
                     #SGD update
@@ -375,17 +447,21 @@ class BackpropNet(object):
                     l.weights = nn.Parameter(l.weights)
                 #zero grad weights just to be sure
                 #self.zero_grad()
+            mean_train_accs.append(np.mean(np.array(epoch_train_accs)))
             if test:
                 with torch.no_grad():
+                    epoch_test_accs = []
                     for tn, (test_img, test_label) in enumerate(testset):
                         test_img = test_img.to(self.device)
                         labels = onehot(test_label).to(self.device)
                         pred_outs = self.forward(test_img)
                         test_acc = accuracy(pred_outs, labels)
                         test_accs.append(test_acc)
+                        epoch_test_accs.append(test_acc)
             losses.append(np.mean(np.array(losslist)))
             accs.append(np.mean(np.array(acclist)))
-            self.save_model(logdir,savedir,losses,accs,test_accs)
+            mean_test_accs.append(np.mean(np.array(epoch_test_accs)))
+            self.save_model(logdir,savedir,losses,accs,test_accs,mean_test_accs, mean_train_accs,)
         if test:
             return losses, accs, test_accs
         else:
@@ -415,6 +491,7 @@ if __name__ == '__main__':
     parser.add_argument("--use_backward_nonlinearity",type=boolcheck, default=True)
     parser.add_argument("--update_backwards_weights",type=boolcheck,default=True)
     parser.add_argument("--network_type",type=str,default="ar")
+    parser.add_argument("--store_gradient_angle",type=boolcheck,default=True)
 
     args = parser.parse_args()
     print("Args parsed")
@@ -439,7 +516,7 @@ if __name__ == '__main__':
       raise ValueError("dataset not recognised")
     layers =[l1,l2,l3,l4]
     if args.network_type == "ar":
-        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,device=DEVICE)
+        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,store_gradient_angle = args.store_gradient_angle,device=DEVICE)
     elif args.network_type == "bp":
         net = BackpropNet(layers,device=DEVICE)
     else:
