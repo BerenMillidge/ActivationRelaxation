@@ -133,6 +133,23 @@ def accuracy(out, L):
       total +=1
   return total/ B
 
+### loss functions
+def mse_loss(out, label):
+      return torch.sum((out-label)**2)
+
+ce_loss = nn.CrossEntropyLoss()
+
+def cross_entropy_loss(out,label):
+      return ce_loss(out,label)
+
+def parse_loss_function(loss_arg):
+      if loss_arg == "mse":
+            return mse_loss
+      elif loss_arg == "crossentropy":
+            return cross_entropy_loss
+      else:
+            raise ValueError("loss argument not expected. Can be one of 'mse' and 'crossentropy'. You inputted " + str(loss_arg))
+
 
 def boolcheck(x):
     return str(x).lower() in ["true", "1", "yes"]
@@ -206,13 +223,14 @@ class FCLayer(object):
 
 
 class Net(object):
-  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,store_gradient_angle=False,device="cpu"):
+  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,store_gradient_angle=False,loss_fn = None,device="cpu"):
     self.layers = layers
     self.n_inference_steps = n_inference_steps
     self.use_backwards_weights = use_backwards_weights
     self.update_backwards_weights = update_backwards_weights
     self.use_backward_nonlinearity = use_backward_nonlinearity
     self.store_gradient_angle = store_gradient_angle
+    self.loss_fn = loss_fn
     self.device = device
     self.update_layer_params()
     #check that the correct things are getting called
@@ -273,7 +291,10 @@ class Net(object):
     for i,l in enumerate(self.layers):
       xs[i+1] = l.forward(xs[i])
     #inference
-    out_error = 2 * (xs[-1] - labels)
+    if self.loss_fn:
+          out_error = loss_fn(xs[-1],labels)
+    else:
+      out_error = 2 * (xs[-1] - labels)
     backs = [[] for i in range(len(self.layers)+1)]
     backs[-1] = out_error
     for n in range(num_inference_steps):
@@ -293,7 +314,7 @@ class Net(object):
     np.save(logdir+"/test_accs.npy",np.array(test_accs))
     np.save(logdir + "/grad_angles.npy", np.array(grad_angles))
     np.save(logdir + "/mean_test_accs.npy", np.array(mean_test_accs))
-    np.save(logdit + "/mean_train_accs.npy", np.array(mean_train_accs))
+    np.save(logdir + "/mean_train_accs.npy", np.array(mean_train_accs))
     subprocess.call(['rsync','--archive','--update','--compress','--progress',str(logdir) +"/",str(savedir)])
     print("Rsynced files from: " + str(logdir) + "/ " + " to" + str(savedir))
     now = datetime.now()
@@ -326,9 +347,6 @@ class Net(object):
               angle = np.arccos(angle)
               mean_angle += angle
         return mean_angle / len(self.layers)
-
-              
-              
 
 
   def train(self, trainset, testset,logdir,savedir, num_epochs,num_inference_steps,test=True):
@@ -385,9 +403,10 @@ class Net(object):
         return losses, accs
 
 class BackpropNet(object):
-    def __init__(self, layers,device="cpu"):
+    def __init__(self, layers,loss_fn=None,device="cpu"):
         self.layers = layers
         self.device = device
+        self.loss_fn = loss_fn
         for l in self.layers:
             l.set_weight_parameter()
             l.numerical_test = True
@@ -402,7 +421,7 @@ class BackpropNet(object):
         np.save(logdir+"/accs.npy",np.array(accs))
         np.save(logdir+"/test_accs.npy",np.array(test_accs))
         np.save(logdir + "/mean_test_accs.npy", np.array(mean_test_accs))
-        np.save(logdit + "/mean_train_accs.npy", np.array(mean_train_accs))
+        np.save(logdir + "/mean_train_accs.npy", np.array(mean_train_accs))
         subprocess.call(['rsync','--archive','--update','--compress','--progress',str(logdir) +"/",str(savedir)])
         print("Rsynced files from: " + str(logdir) + "/ " + " to" + str(savedir))
         now = datetime.now()
@@ -430,7 +449,10 @@ class BackpropNet(object):
                 img = img.to(self.device)
                 label = onehot(label).to(self.device)
                 pred_outs = self.forward(img)
-                L = torch.sum((pred_outs - label)**2)
+                if self.loss_fn:
+                      L = self.loss_fn(pred_outs, label)
+                else:
+                      L = torch.sum((pred_outs - label)**2)
                 L.backward()
                 acc = accuracy(pred_outs,label)
                 print("epoch: " + str(n_epoch) + " loss batch " + str(n) + "  " + str(L))
@@ -492,6 +514,7 @@ if __name__ == '__main__':
     parser.add_argument("--update_backwards_weights",type=boolcheck,default=True)
     parser.add_argument("--network_type",type=str,default="ar")
     parser.add_argument("--store_gradient_angle",type=boolcheck,default=True)
+    parser.add_argument("--loss_fn",type=str, default="")
 
     args = parser.parse_args()
     print("Args parsed")
@@ -501,6 +524,9 @@ if __name__ == '__main__':
     if args.logdir != "":
         subprocess.call(["mkdir","-p",str(args.logdir)])
     print("folders created")
+    loss_fn = None
+    if args.loss_fn != "":
+          loss_fn = parse_loss_function(args.loss_fn)
     trainset,testset = get_dataset(args.batch_size,args.norm_factor,dataset=args.dataset)
     if args.dataset == "mnist" or args.dataset=="fashion":
       l1 = FCLayer(784,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
@@ -516,9 +542,9 @@ if __name__ == '__main__':
       raise ValueError("dataset not recognised")
     layers =[l1,l2,l3,l4]
     if args.network_type == "ar":
-        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,store_gradient_angle = args.store_gradient_angle,device=DEVICE)
+        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,store_gradient_angle = args.store_gradient_angle,loss_fn=loss_fn,device=DEVICE)
     elif args.network_type == "bp":
-        net = BackpropNet(layers,device=DEVICE)
+        net = BackpropNet(layers,loss_fn=loss_fn,device=DEVICE)
     else:
         raise ValueError("Network type not recognised: must be either ar (activation relaxation) or bp (backprop)")
     net.train(trainset[0:-2],testset[0:-2],args.logdir,args.savedir,args.N_epochs, args.n_inference_steps)
