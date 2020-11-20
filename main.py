@@ -126,6 +126,9 @@ def sigmoid_deriv(xs):
    
 
 def accuracy(out, L):
+  if len(L.shape) == 1:
+    # i.e. not onehotted
+    L = onehot(L)
   B,l = out.shape
   total = 0
   for i in range(B):
@@ -140,7 +143,10 @@ def mse_loss(out, label):
 ce_loss = nn.CrossEntropyLoss()
 
 def cross_entropy_loss(out,label):
-      return ce_loss(out,label)
+      print("in cross entropy")
+      print(out.shape)
+      print(label.shape)
+      return ce_loss(out,label.long())
 
 def parse_loss_function(loss_arg):
       if loss_arg == "mse":
@@ -292,7 +298,7 @@ class Net(object):
       xs[i+1] = l.forward(xs[i])
     #inference
     if self.loss_fn:
-          out_error = loss_fn(xs[-1],labels)
+          out_error = self.loss_fn(xs[-1],labels)
     else:
       out_error = 2 * (xs[-1] - labels)
     backs = [[] for i in range(len(self.layers)+1)]
@@ -331,7 +337,10 @@ class Net(object):
         self.set_net_params()
         img = nn.Parameter(img)
         out = self.forward(img)
-        L = torch.sum((out - label)**2)
+        if self.loss_fn == cross_entropy_loss:
+          L = self.loss_fn(out, label)
+        else:
+          L = torch.sum((out - label)**2)
         L.backward()
         BP_grads = [deepcopy(l.weights.grad) for l in self.layers]
         self.detach_net_params()
@@ -339,8 +348,8 @@ class Net(object):
         mean_angle = 0
         for (AR_grad, BP_grad) in zip(AR_grads, BP_grads):
               # lillicrap approach of simply computing the cosine similarity on the flattened gradient matrices
-              AR_flat = AR_grad.detach().flatten()
-              BP_flat = BP_grad.detach().flatten()
+              AR_flat = AR_grad.detach().flatten().cpu()
+              BP_flat = BP_grad.detach().flatten().cpu()
               angle = (torch.dot(AR_flat, BP_flat) / (np_norm(AR_flat) * np_norm(BP_flat))).item()
               if angle >= 1: # hack for stability
                 angle = 0.99999
@@ -362,16 +371,27 @@ class Net(object):
       epoch_train_accs = []
       print("Beginning epoch ",n_epoch)
       for n,(img,label) in enumerate(trainset):
+        print("label pre: ", label.shape)
         with torch.no_grad():
           img = img.to(self.device)
-          label = onehot(label).to(self.device)
+          print("loss_fn", self.loss_fn)
+          if self.loss_fn != cross_entropy_loss:
+            print("in onehotting")
+            label = onehot(label).to(self.device)
+          else:
+            print("prepping for crossentropy")
+            label = label.long().to(self.device)
+          print("label: ", label.shape)
           self.learn_batch(img, label,self.n_inference_steps,update_weights=True)
           pred_outs = self.forward(img)
-          L = torch.sum((pred_outs - label)**2)
+          if self.loss_fn is not None:
+            L = self.loss_fn(pred_outs, label).item()
+          else:
+            L = torch.sum((pred_outs - label)**2).item()
           acc = accuracy(pred_outs,label)
           print("epoch: " + str(n_epoch) + " loss batch " + str(n) + "  " + str(L))
           print("acc batch " + str(n) + "  " + str(acc))
-          losses.append(L.item())
+          losses.append(L)
           accs.append(acc)
           epoch_train_accs.append(accs)
         if self.store_gradient_angle:
@@ -447,7 +467,10 @@ class BackpropNet(object):
             acclist = []
             for n,(img,label) in enumerate(trainset):
                 img = img.to(self.device)
-                label = onehot(label).to(self.device)
+                if self.loss_fn != cross_entropy_loss:
+                  label = onehot(label).to(self.device)
+                else:
+                      label = label.long().to(self.device)
                 pred_outs = self.forward(img)
                 if self.loss_fn:
                       L = self.loss_fn(pred_outs, label)
