@@ -140,19 +140,25 @@ def accuracy(out, L):
 def mse_loss(out, label):
       return torch.sum((out-label)**2)
 
+def mse_deriv(out,label):
+      return 2 * (out - label)
+
 ce_loss = nn.CrossEntropyLoss()
 
 def cross_entropy_loss(out,label):
-      print("in cross entropy")
-      print(out.shape)
-      print(label.shape)
-      return ce_loss(out,label.long())
+      return ce_loss(out,label)
+
+def my_cross_entropy(out,label):
+      return torch.sum(label * torch.log(out + 1e-6))
+
+def cross_entropy_deriv(out,label):
+      return out - label
 
 def parse_loss_function(loss_arg):
       if loss_arg == "mse":
-            return mse_loss
+            return mse_loss, mse_deriv
       elif loss_arg == "crossentropy":
-            return cross_entropy_loss
+            return my_cross_entropy, cross_entropy_deriv
       else:
             raise ValueError("loss argument not expected. Can be one of 'mse' and 'crossentropy'. You inputted " + str(loss_arg))
 
@@ -229,7 +235,7 @@ class FCLayer(object):
 
 
 class Net(object):
-  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,store_gradient_angle=False,loss_fn = None,device="cpu"):
+  def __init__(self, layers, n_inference_steps,use_backwards_weights, update_backwards_weights, use_backward_nonlinearity,store_gradient_angle=False,loss_fn = None,loss_fn_deriv=None,device="cpu"):
     self.layers = layers
     self.n_inference_steps = n_inference_steps
     self.use_backwards_weights = use_backwards_weights
@@ -237,6 +243,7 @@ class Net(object):
     self.use_backward_nonlinearity = use_backward_nonlinearity
     self.store_gradient_angle = store_gradient_angle
     self.loss_fn = loss_fn
+    self.loss_fn_deriv = loss_fn_deriv
     self.device = device
     self.update_layer_params()
     #check that the correct things are getting called
@@ -298,7 +305,7 @@ class Net(object):
       xs[i+1] = l.forward(xs[i])
     #inference
     if self.loss_fn:
-          out_error = self.loss_fn(xs[-1],labels)
+          out_error = self.loss_fn_deriv(xs[-1],labels)
     else:
       out_error = 2 * (xs[-1] - labels)
     backs = [[] for i in range(len(self.layers)+1)]
@@ -371,17 +378,12 @@ class Net(object):
       epoch_train_accs = []
       print("Beginning epoch ",n_epoch)
       for n,(img,label) in enumerate(trainset):
-        print("label pre: ", label.shape)
         with torch.no_grad():
           img = img.to(self.device)
-          print("loss_fn", self.loss_fn)
           if self.loss_fn != cross_entropy_loss:
-            print("in onehotting")
             label = onehot(label).to(self.device)
           else:
-            print("prepping for crossentropy")
             label = label.long().to(self.device)
-          print("label: ", label.shape)
           self.learn_batch(img, label,self.n_inference_steps,update_weights=True)
           pred_outs = self.forward(img)
           if self.loss_fn is not None:
@@ -542,7 +544,7 @@ if __name__ == '__main__':
     print("folders created")
     loss_fn = None
     if args.loss_fn != "":
-          loss_fn = parse_loss_function(args.loss_fn)
+          loss_fn,loss_fn_deriv = parse_loss_function(args.loss_fn)
     trainset,testset = get_dataset(args.batch_size,args.norm_factor,dataset=args.dataset)
     if args.dataset == "mnist" or args.dataset=="fashion":
       l1 = FCLayer(784,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
@@ -558,7 +560,7 @@ if __name__ == '__main__':
       raise ValueError("dataset not recognised")
     layers =[l1,l2,l3,l4]
     if args.network_type == "ar":
-        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,store_gradient_angle = args.store_gradient_angle,loss_fn=loss_fn,device=DEVICE)
+        net = Net(layers,args.n_inference_steps,use_backwards_weights=args.use_backwards_weights, update_backwards_weights = args.update_backwards_weights, use_backward_nonlinearity = args.use_backward_nonlinearity,store_gradient_angle = args.store_gradient_angle,loss_fn=loss_fn,loss_fn_deriv = loss_fn_deriv,device=DEVICE)
     elif args.network_type == "bp":
         net = BackpropNet(layers,loss_fn=loss_fn,device=DEVICE)
     else:
