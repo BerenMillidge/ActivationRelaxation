@@ -410,17 +410,10 @@ class Net(object):
           epoch_test_accs.append(test_acc)
         mean_test_accs.append(np.mean(np.array(epoch_test_accs)))
       self.save_model(logdir,savedir,losses,accs,test_accs,gradient_angles,mean_test_accs, mean_train_accs)
-
-      #print("Losses")
-      #plt.plot(losses)
-      #plt.show()
-      #print("accs")
-      #plt.plot(accs)
-      #plt.show()
-      if test:
-        return losses, accs, test_accs
-      else:
-        return losses, accs
+    if test:
+      return losses, accs, test_accs
+    else:
+      return losses, accs
 
 class BackpropNet(object):
     def __init__(self, layers,loss_fn=None,device="cpu"):
@@ -454,63 +447,63 @@ class BackpropNet(object):
 
 
     def train(self, trainset, testset,logdir,savedir, num_epochs,num_inference_steps,test=True):
-        losses = []
-        accs = []
-        test_accs = []
-        mean_train_accs = []
-        mean_test_accs = []
-        #begin training loop
-        for n_epoch in range(num_epochs):
-            epoch_train_accs = []
-            print("Beginning epoch ",n_epoch)
-            losslist = []
-            acclist = []
-            for n,(img,label) in enumerate(trainset):
-                img = img.to(self.device)
-                if self.loss_fn != cross_entropy_loss:
-                  label = onehot(label).to(self.device)
-                else:
-                      label = label.long().to(self.device)
-                pred_outs = self.forward(img)
-                if self.loss_fn:
-                      L = self.loss_fn(pred_outs, label)
-                else:
-                      L = torch.sum((pred_outs - label)**2)
-                L.backward()
-                acc = accuracy(pred_outs,label)
-                print("epoch: " + str(n_epoch) + " loss batch " + str(n) + "  " + str(L))
-                print("acc batch " + str(n) + "  " + str(acc))
-                losslist.append(L.item())
-                acclist.append(acc)
-                epoch_train_accs.append(accs)
-                #update
-                for l in self.layers:
-                    #SGD update
-                    lgrad = l.weights.grad.clone()
-                    l.weights = l.weights.detach().clone()
-                    l.weights -= l.weight_lr * lgrad
-                    l.weights = nn.Parameter(l.weights)
-                #zero grad weights just to be sure
-                #self.zero_grad()
-            mean_train_accs.append(np.mean(np.array(epoch_train_accs)))
-            if test:
-                with torch.no_grad():
-                    epoch_test_accs = []
-                    for tn, (test_img, test_label) in enumerate(testset):
-                        test_img = test_img.to(self.device)
-                        labels = onehot(test_label).to(self.device)
-                        pred_outs = self.forward(test_img)
-                        test_acc = accuracy(pred_outs, labels)
-                        test_accs.append(test_acc)
-                        epoch_test_accs.append(test_acc)
-            losses.append(np.mean(np.array(losslist)))
-            accs.append(np.mean(np.array(acclist)))
-            mean_test_accs.append(np.mean(np.array(epoch_test_accs)))
-            self.save_model(logdir,savedir,losses,accs,test_accs,mean_test_accs, mean_train_accs,)
-        if test:
-            return losses, accs, test_accs
-        else:
-            return losses, accs
+      losses = []
+      accs = []
+      test_accs = []
+      mean_train_accs = []
+      mean_test_accs = []
+      #begin training loop
+      for n_epoch in range(num_epochs):
+          epoch_train_accs = []
+          print("Beginning epoch ",n_epoch)
+          losslist = []
+          acclist = []
+          for n,(img,label) in enumerate(trainset):
+              img = img.to(self.device)
+              if self.loss_fn != cross_entropy_loss:
+                label = onehot(label).to(self.device)
+              else:
+                    label = label.long().to(self.device)
+              pred_outs = self.forward(img)
+              if self.loss_fn:
+                    L = self.loss_fn(pred_outs, label)
+              else:
+                    L = torch.sum((pred_outs - label)**2)
+              L.backward()
+              acc = accuracy(pred_outs,label)
+              print("epoch: " + str(n_epoch) + " loss batch " + str(n) + "  " + str(L))
+              print("acc batch " + str(n) + "  " + str(acc))
+              losslist.append(L.item())
+              acclist.append(acc)
+              epoch_train_accs.append(accs)
+              #update
+              for l in self.layers:
+                  #SGD update
+                  lgrad = l.weights.grad.clone()
+                  l.weights = l.weights.detach().clone()
+                  l.weights -= l.weight_lr * lgrad
+                  l.weights = nn.Parameter(l.weights)
+              #zero grad weights just to be sure
+              #self.zero_grad()
+          mean_train_accs.append(np.mean(np.array(epoch_train_accs)))
+          if test:
+              with torch.no_grad():
+                  epoch_test_accs = []
+                  for tn, (test_img, test_label) in enumerate(testset):
+                      test_img = test_img.to(self.device)
+                      labels = onehot(test_label).to(self.device)
+                      pred_outs = self.forward(test_img)
+                      test_acc = accuracy(pred_outs, labels)
+                      test_accs.append(test_acc)
+                      epoch_test_accs.append(test_acc)
+          losses.append(np.mean(np.array(losslist)))
+          accs.append(np.mean(np.array(acclist)))
+          mean_test_accs.append(np.mean(np.array(epoch_test_accs)))
+          self.save_model(logdir,savedir,losses,accs,test_accs,mean_test_accs, mean_train_accs)
+      if test:
+          return losses, accs, test_accs
+      else:
+          return losses, accs
 
 
 
@@ -526,7 +519,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size",type=int, default=64)
     parser.add_argument("--norm_factor",type=float, default=1)
     parser.add_argument("--learning_rate",type=float,default=0.0005)
-    parser.add_argument("--N_epochs",type=int, default=30)
+    parser.add_argument("--N_epochs",type=int, default=50)
     parser.add_argument("--save_every",type=int, default=1)
     parser.add_argument("--old_savedir",type=str,default="None")
     parser.add_argument("--n_inference_steps",type=int,default=100)
