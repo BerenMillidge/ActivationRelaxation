@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os 
 import sys
 import seaborn as sns 
-EPOCH_NUM=20000
+EPOCH_NUM=100000
 def get_results(basepath,cnn=True,merged=False):
     ### Loads results losses and accuracies files ###
     dirs = os.listdir(basepath)
@@ -23,6 +23,9 @@ def get_results(basepath,cnn=True,merged=False):
         print("l: ", l.shape)
     else:
         return np.array(acclist), np.array(losslist),np.array(test_acclist)
+
+
+
 
 
 def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
@@ -82,6 +85,39 @@ def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
         fig.savefig("./figures/"+title +"_"+titles[i]+"_prelim_2.jpg")
         plt.show()
 
+def get_grad_angle_results(basepath,cnn=True,merged=False):
+    ### Loads results losses and accuracies files ###
+    dirs = os.listdir(basepath)
+    print(dirs)
+    angle_list = []
+    dirs.sort()
+    for i in range(len(dirs)):
+        p = basepath + "/" + str(dirs[i]) + "/"
+        angle_list.append(np.load(p + "grad_angles.npy")[0:EPOCH_NUM])
+    return np.array(angle_list)
+    
+def plot_grad_angle_results(pc_path, backprop_path,title,label1,label2):
+    ### Plots initial results and accuracies ###
+    ar_anglelist = get_grad_angle_results(pc_path)
+    xs = np.arange(0,len(ar_anglelist[0,:]))
+    mean_pc = np.mean(ar_anglelist, axis=0)
+    std_pc = np.std(ar_anglelist,axis=0)
+    fig,ax = plt.subplots(1,1)
+    ax.fill_between(xs, mean_pc - std_pc, mean_pc+ std_pc, alpha=0.5,color='#228B22')
+    plt.plot(mean_pc,label=label1,color='#228B22')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.title(title,fontsize=18)
+    ax.tick_params(axis='both',which='major',labelsize=12)
+    ax.tick_params(axis='both',which='minor',labelsize=10)
+    plt.ylabel("Gradient Angle",fontsize=16)
+    plt.xlabel("Iterations",fontsize=16)
+    fig.tight_layout()
+    fig.savefig("./figures/"+title +"_grad_angle.jpg")
+    plt.show()
+
+
+
 
 #print("loading...")
 #pc_path = sys.argv[1]
@@ -90,7 +126,7 @@ def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
 #EPOCH_NUM = 5000
 
 if __name__ == "__main__":
-    basepath = "activation_relaxation_experiments/full_run_"
+    basepath = "activation_relaxation_experiments/gradient_angle_"
     #default_path = basepath + "initial_run1_default"
     #backprop_path = basepath+"backprop_backprop"
     #fa_path = basepath + "initial_run1_feedback_alignment"
@@ -124,7 +160,32 @@ if __name__ == "__main__":
     fashion_backwards_weights = basepath + "fashion_backwards_weights_with_update"
     fashion_nonlin = basepath + "fashion_no_nonlinearities"
     fashion_full_construct = basepath + "fashion_full_construct"
+
     #MNIST
+    # ar vs backprop
+    plot_grad_angle_results(mnist_default,mnist_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
+    #feedback alignment
+    plot_grad_angle_results(mnist_backwards_weights, mnist_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    # nonlinearities
+    plot_grad_angle_results(mnist_nonlin, mnist_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
+    # Combined
+    plot_grad_angle_results(mnist_full_construct, mnist_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
+    
+    #FASHION
+    # ar vs backprop
+    plot_grad_angle_results(fashion_default,fashion_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
+    #feedback alignment
+    plot_grad_angle_results(fashion_backwards_weights, fashion_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    # nonlinearities
+    plot_grad_angle_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
+    # Combined
+    plot_grad_angle_results(fashion_full_construct, fashion_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
+
+
+
+
+
+    """#MNIST
     # ar vs backprop
     plot_results(mnist_default,mnist_bp,"Activation Relaxation vs Backprop", "Activation Relaxation", "Backprop")
     #feedback alignment
@@ -142,7 +203,7 @@ if __name__ == "__main__":
     # nonlinearities
     plot_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative", "Default AR", "No Backwards Derivative")
     # Combined
-    plot_results(fashion_full_construct, fashion_default,"Combined Algorithm","Default AR", "Combined Relaxations")
+    plot_results(fashion_full_construct, fashion_default,"Combined Algorithm","Default AR", "Combined Relaxations")"""
     
 
 
