@@ -116,7 +116,7 @@ def relu_deriv(xs):
   return rel 
 
 def softmax(xs):
-  return torch.nn.softmax(xs)
+  return F.softmax(xs)
 
 def sigmoid(xs):
   return F.sigmoid(xs)
@@ -149,7 +149,7 @@ def cross_entropy_loss(out,label):
       return ce_loss(out,label)
 
 def my_cross_entropy(out,label):
-      return torch.sum(label * torch.log(out + 1e-6))
+      return -torch.sum(label * torch.log(out + 1e-6))
 
 def cross_entropy_deriv(out,label):
       return out - label
@@ -482,8 +482,9 @@ class BackpropNet(object):
               for l in self.layers:
                   #SGD update
                   lgrad = l.weights.grad.clone()
+                  #print(lgrad)
                   l.weights = l.weights.detach().clone()
-                  l.weights -= l.weight_lr * lgrad
+                  l.weights -= l.weight_lr * 10 * lgrad
                   l.weights = nn.Parameter(l.weights)
               #zero grad weights just to be sure
               #self.zero_grad()
@@ -550,12 +551,12 @@ if __name__ == '__main__':
       l1 = FCLayer(784,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l2 = FCLayer(300,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l3 = FCLayer(300,100,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-      l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l4 = FCLayer(100,10,args.batch_size,softmax,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     elif args.dataset == "svhn":
       l1 = FCLayer(3072,1000,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l2 = FCLayer(1000,1000,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l3 = FCLayer(1000,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-      l4 = FCLayer(300,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      l4 = FCLayer(300,10,args.batch_size,softmax,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     else:
       raise ValueError("dataset not recognised")
     layers =[l1,l2,l3,l4]
