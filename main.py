@@ -551,12 +551,18 @@ if __name__ == '__main__':
       l1 = FCLayer(784,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l2 = FCLayer(300,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l3 = FCLayer(300,100,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-      l4 = FCLayer(100,10,args.batch_size,softmax,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      if args.loss_fn == "crossentropy":
+        l4 = FCLayer(100,10,args.batch_size,softmax,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      else:
+          l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     elif args.dataset == "svhn":
       l1 = FCLayer(3072,1000,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l2 = FCLayer(1000,1000,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
       l3 = FCLayer(1000,300,args.batch_size,relu,relu_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
-      l4 = FCLayer(300,10,args.batch_size,softmax,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      if args.loss_fn == "crossentropy":
+        l4 = FCLayer(100,10,args.batch_size,softmax,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
+      else:
+        l4 = FCLayer(100,10,args.batch_size,linear,linear_deriv,args.inference_learning_rate, args.learning_rate,device=DEVICE)
     else:
       raise ValueError("dataset not recognised")
     layers =[l1,l2,l3,l4]
