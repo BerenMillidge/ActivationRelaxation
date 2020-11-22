@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os 
 import sys
 import seaborn as sns 
+import torch
 EPOCH_NUM=100000
 def get_results(basepath,cnn=True,merged=False):
     ### Loads results losses and accuracies files ###
@@ -14,9 +15,12 @@ def get_results(basepath,cnn=True,merged=False):
     dirs.sort()
     for i in range(len(dirs)):
         p = basepath + "/" + str(dirs[i]) + "/"
-        acclist.append(np.load(p + "accs.npy")[0:EPOCH_NUM])
-        losslist.append(np.load(p + "losses.npy")[0:EPOCH_NUM])
-        test_acclist.append(np.load(p+"test_accs.npy")[0:EPOCH_NUM])
+        #acclist.append(np.load(p + "accs.npy")[0:EPOCH_NUM])
+        acclist.append(np.load(p + "mean_train_accs.npy")[0:EPOCH_NUM])
+        
+        #losslist.append(np.load(p + "losses.npy")[0:EPOCH_NUM])
+        #test_acclist.append(np.load(p+"test_accs.npy")[0:EPOCH_NUM])
+        test_acclist.append(np.load(p+"mean_test_accs.npy")[0:EPOCH_NUM])
     print("enumerating through results")
     for i,(acc, l) in enumerate(zip(acclist, losslist)):
         print("acc: ", acc.shape)
@@ -32,12 +36,12 @@ def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
     ### Plots initial results and accuracies ###
     acclist, losslist, test_acclist = get_results(pc_path)
     backprop_acclist, backprop_losslist, backprop_test_acclist = get_results(backprop_path)
-    titles = ["accuracies", "losses", "test accuracies"]
+    titles = ["accuracies", "test accuracies"]
     if path3 != "":
         p3_acclist, p3_losslist, p3_test_accslist = get_results(path3)
         p3_list = [p3_acclist,p3_losslist,p3_test_accslist]
-    pc_list = [acclist, losslist, test_acclist]
-    backprop_list = [backprop_acclist, backprop_losslist, backprop_test_acclist]
+    pc_list = [acclist,test_acclist]
+    backprop_list = [backprop_acclist,backprop_test_acclist]
     print(acclist.shape)
     print(losslist.shape)
     print(test_acclist.shape)
@@ -85,6 +89,8 @@ def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
         fig.savefig("./figures/"+title +"_"+titles[i]+"_prelim_2.jpg")
         plt.show()
 
+def rad_to_degree(x):
+    return x * (180 / np.pi)
 def get_grad_angle_results(basepath,cnn=True,merged=False):
     ### Loads results losses and accuracies files ###
     dirs = os.listdir(basepath)
@@ -98,7 +104,7 @@ def get_grad_angle_results(basepath,cnn=True,merged=False):
     
 def plot_grad_angle_results(pc_path, backprop_path,title,label1,label2):
     ### Plots initial results and accuracies ###
-    ar_anglelist = get_grad_angle_results(pc_path)
+    ar_anglelist = rad_to_degree(get_grad_angle_results(pc_path))
     xs = np.arange(0,len(ar_anglelist[0,:]))
     mean_pc = np.mean(ar_anglelist, axis=0)
     std_pc = np.std(ar_anglelist,axis=0)
@@ -163,50 +169,47 @@ if __name__ == "__main__":
 
     #MNIST
     # ar vs backprop
-    plot_grad_angle_results(mnist_default,mnist_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
+    #plot_grad_angle_results(mnist_default,mnist_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
     #feedback alignment
-    plot_grad_angle_results(mnist_backwards_weights, mnist_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    #plot_grad_angle_results(mnist_backwards_weights, mnist_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    plot_grad_angle_results(mnist_nonlin, mnist_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
+    #plot_grad_angle_results(mnist_nonlin, mnist_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
     # Combined
-    plot_grad_angle_results(mnist_full_construct, mnist_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
+    #plot_grad_angle_results(mnist_full_construct, mnist_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
     
     #FASHION
     # ar vs backprop
-    plot_grad_angle_results(fashion_default,fashion_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
+    #plot_grad_angle_results(fashion_default,fashion_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
     #feedback alignment
-    plot_grad_angle_results(fashion_backwards_weights, fashion_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    #plot_grad_angle_results(fashion_backwards_weights, fashion_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    plot_grad_angle_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
+    #plot_grad_angle_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
     # Combined
-    plot_grad_angle_results(fashion_full_construct, fashion_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
+    #plot_grad_angle_results(fashion_full_construct, fashion_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
 
 
 
 
 
-    """#MNIST
+    #MNIST
     # ar vs backprop
     plot_results(mnist_default,mnist_bp,"Activation Relaxation vs Backprop", "Activation Relaxation", "Backprop")
     #feedback alignment
-    plot_results(mnist_backwards_weights, mnist_default,"Backwards Weights", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    plot_results(mnist_backwards_weights, mnist_bp,"Backwards Weights", "Learnt Backwards Weights","Backprop")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    plot_results(mnist_nonlin, mnist_default,"No Nonlinear Derivative", "Default AR", "No Backwards Derivative")
+    plot_results(mnist_nonlin, mnist_bp,"No Nonlinear Derivative", "No Backwards Derivative","Backprop")
     # Combined
-    plot_results(mnist_full_construct, mnist_default,"Combined Algorithm","Default AR", "Combined Relaxations")
+    plot_results(mnist_full_construct, mnist_bp,"Combined Algorithm", "Combined Relaxations","Backprop")
     
     #FASHION
     # ar vs backprop
     plot_results(fashion_default,fashion_bp,"Activation Relaxation vs Backprop", "Activation Relaxation", "Backprop")
     #feedback alignment
-    plot_results(fashion_backwards_weights, fashion_default,"Backwards Weights", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    plot_results(fashion_backwards_weights, fashion_bp,"Backwards Weights", "Learnt Backwards Weights","Backprop")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    plot_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative", "Default AR", "No Backwards Derivative")
+    plot_results(fashion_nonlin, fashion_bp,"No Nonlinear Derivative",  "No Backwards Derivative","Backprop")
     # Combined
-    plot_results(fashion_full_construct, fashion_default,"Combined Algorithm","Default AR", "Combined Relaxations")"""
-    
-
-
+    plot_results(fashion_full_construct, fashion_bp,"Combined Algorithm","Combined Relaxations","Backprop")
     #ar vs backprop MNIST
     #plot_results(mnist_ar,mnist_bp,"Activation Relaxation vs Backprop on MNIST", "Activation Relaxation", "Backprop")
     # ar vs backprop Fashion MNIST
