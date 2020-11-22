@@ -32,7 +32,7 @@ def get_results(basepath,cnn=True,merged=False):
 
 
 
-def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
+def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3="",dataset=""):
     ### Plots initial results and accuracies ###
     acclist, losslist, test_acclist = get_results(pc_path)
     backprop_acclist, backprop_losslist, backprop_test_acclist = get_results(backprop_path)
@@ -86,11 +86,14 @@ def plot_results(pc_path, backprop_path,title,label1,label2,path3="",label3=""):
         frame.set_facecolor("1.0")
         frame.set_edgecolor("1.0")
         fig.tight_layout()
-        fig.savefig("./figures/"+title +"_"+titles[i]+"_prelim_2.jpg")
+        fig.savefig("./figures/"+ str(dataset) +"_" + underscore_title(title) +"_"+titles[i] + ".jpg")
         plt.show()
 
 def rad_to_degree(x):
     return x * (180 / np.pi)
+
+def underscore_title(s):
+    return s.replace(" ", "_")
 def get_grad_angle_results(basepath,cnn=True,merged=False):
     ### Loads results losses and accuracies files ###
     dirs = os.listdir(basepath)
@@ -102,7 +105,7 @@ def get_grad_angle_results(basepath,cnn=True,merged=False):
         angle_list.append(np.load(p + "grad_angles.npy")[0:EPOCH_NUM])
     return np.array(angle_list)
     
-def plot_grad_angle_results(pc_path, backprop_path,title,label1,label2):
+def plot_grad_angle_results(pc_path, backprop_path,title,label1,label2,dataset):
     ### Plots initial results and accuracies ###
     ar_anglelist = rad_to_degree(get_grad_angle_results(pc_path))
     xs = np.arange(0,len(ar_anglelist[0,:]))
@@ -119,7 +122,7 @@ def plot_grad_angle_results(pc_path, backprop_path,title,label1,label2):
     plt.ylabel("Gradient Angle",fontsize=16)
     plt.xlabel("Iterations",fontsize=16)
     fig.tight_layout()
-    fig.savefig("./figures/"+title +"_grad_angle.jpg")
+    fig.savefig("./figures/" + str(dataset) +"_" +underscore_title(title) +"_grad_angle.jpg")
     plt.show()
 
 
@@ -169,23 +172,23 @@ if __name__ == "__main__":
 
     #MNIST
     # ar vs backprop
-    #plot_grad_angle_results(mnist_default,mnist_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
+    plot_grad_angle_results(mnist_default,mnist_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop",dataset="mnist")
     #feedback alignment
-    #plot_grad_angle_results(mnist_backwards_weights, mnist_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    plot_grad_angle_results(mnist_backwards_weights, mnist_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights",dataset="mnist")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    #plot_grad_angle_results(mnist_nonlin, mnist_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
+    plot_grad_angle_results(mnist_nonlin, mnist_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative",dataset="mnist")
     # Combined
-    #plot_grad_angle_results(mnist_full_construct, mnist_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
+    plot_grad_angle_results(mnist_full_construct, mnist_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations",dataset="mnist")
     
     #FASHION
     # ar vs backprop
-    #plot_grad_angle_results(fashion_default,fashion_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop")
+    plot_grad_angle_results(fashion_default,fashion_bp,"AR Gradient Angle", "Activation Relaxation", "Backprop",dataset="fashion")
     #feedback alignment
-    #plot_grad_angle_results(fashion_backwards_weights, fashion_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights")#,path3=fa_path,label3="Feedback Alignment")
+    plot_grad_angle_results(fashion_backwards_weights, fashion_default,"Backwards Weights Gradient Angle", "Default AR", "Learnt Backwards Weights",dataset="fashion")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    #plot_grad_angle_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative")
+    plot_grad_angle_results(fashion_nonlin, fashion_default,"No Nonlinear Derivative Gradient Angle", "Default AR", "No Backwards Derivative",dataset="fashion")
     # Combined
-    #plot_grad_angle_results(fashion_full_construct, fashion_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations")
+    plot_grad_angle_results(fashion_full_construct, fashion_default,"Combined Algorithm Gradient Angle","Default AR", "Combined Relaxations",dataset="fashion")
 
 
 
@@ -193,23 +196,23 @@ if __name__ == "__main__":
 
     #MNIST
     # ar vs backprop
-    plot_results(mnist_default,mnist_bp,"Activation Relaxation vs Backprop", "Activation Relaxation", "Backprop")
+    plot_results(mnist_default,mnist_bp,"AR vs Backprop", "Activation Relaxation", "Backprop",dataset="mnist")
     #feedback alignment
-    plot_results(mnist_backwards_weights, mnist_bp,"Backwards Weights", "Learnt Backwards Weights","Backprop")#,path3=fa_path,label3="Feedback Alignment")
+    plot_results(mnist_backwards_weights, mnist_bp,"Backwards Weights", "Learnt Backwards Weights","Backprop",dataset="mnist")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    plot_results(mnist_nonlin, mnist_bp,"No Nonlinear Derivative", "No Backwards Derivative","Backprop")
+    plot_results(mnist_nonlin, mnist_bp,"No Nonlinear Derivative", "No Backwards Derivative","Backprop",dataset="mnist")
     # Combined
-    plot_results(mnist_full_construct, mnist_bp,"Combined Algorithm", "Combined Relaxations","Backprop")
+    plot_results(mnist_full_construct, mnist_bp,"Combined Algorithm", "Combined Relaxations","Backprop",dataset="mnist")
     
     #FASHION
     # ar vs backprop
-    plot_results(fashion_default,fashion_bp,"Activation Relaxation vs Backprop", "Activation Relaxation", "Backprop")
+    plot_results(fashion_default,fashion_bp,"AR vs Backprop", "Activation Relaxation", "Backprop",dataset="fashion")
     #feedback alignment
-    plot_results(fashion_backwards_weights, fashion_bp,"Backwards Weights", "Learnt Backwards Weights","Backprop")#,path3=fa_path,label3="Feedback Alignment")
+    plot_results(fashion_backwards_weights, fashion_bp,"Backwards Weights", "Learnt Backwards Weights","Backprop",dataset="fashion")#,path3=fa_path,label3="Feedback Alignment")
     # nonlinearities
-    plot_results(fashion_nonlin, fashion_bp,"No Nonlinear Derivative",  "No Backwards Derivative","Backprop")
+    plot_results(fashion_nonlin, fashion_bp,"No Nonlinear Derivative",  "No Backwards Derivative","Backprop",dataset="fashion")
     # Combined
-    plot_results(fashion_full_construct, fashion_bp,"Combined Algorithm","Combined Relaxations","Backprop")
+    plot_results(fashion_full_construct, fashion_bp,"Combined Algorithm","Combined Relaxations","Backprop",dataset="fashion")
     #ar vs backprop MNIST
     #plot_results(mnist_ar,mnist_bp,"Activation Relaxation vs Backprop on MNIST", "Activation Relaxation", "Backprop")
     # ar vs backprop Fashion MNIST
