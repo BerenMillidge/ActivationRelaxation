@@ -11,6 +11,14 @@ datasets = ["mnist","fashion"]
 for dataset in datasets:
     base_call = bcall + " --dataset " + str(dataset)
     for s in range(seeds):
+        condition=dataset+"_bp"
+        lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
+        spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
+        final_call = base_call + " --logdir " + str(lpath) + " --savedir " + str(spath) + " --network_type bp"
+        print(final_call)
+        print(final_call, file=output_file)
+        
+        """
         condition=dataset+"_default"
         lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
@@ -56,11 +64,4 @@ for dataset in datasets:
         spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
         final_call = base_call + " --logdir " + str(lpath) + " --savedir " + str(spath) + " --use_backwards_weights True --use_backward_nonlinearity False --update_backwards_weights True"
         print(final_call)
-        print(final_call, file=output_file)
-
-        condition=dataset+"_bp"
-        lpath = log_path + "/"+str(exp_name) +"_"+condition + "/" + str(s)
-        spath = save_path + "/" + str(exp_name) +"_"+condition + "/" + str(s)
-        final_call = base_call + " --logdir " + str(lpath) + " --savedir " + str(spath) + " --network_type bp"
-        print(final_call)
-        print(final_call, file=output_file)
+        print(final_call, file=output_file)"""

@@ -484,7 +484,7 @@ class BackpropNet(object):
                   lgrad = l.weights.grad.clone()
                   #print(lgrad)
                   l.weights = l.weights.detach().clone()
-                  l.weights -= l.weight_lr * 10 * lgrad
+                  l.weights -= l.weight_lr  * lgrad
                   l.weights = nn.Parameter(l.weights)
               #zero grad weights just to be sure
               #self.zero_grad()
